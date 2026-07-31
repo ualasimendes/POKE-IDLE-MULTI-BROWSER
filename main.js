@@ -1,15 +1,49 @@
 const { app, BaseWindow, WebContentsView, session, screen } = require('electron');
 const { getRecommendedHunts } = require('./hunts');
+const path = require('path');
+const fs = require('fs');
 
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 
 const URL = 'https://poke.idleworld.online/play';
-const ACCOUNTS = [
-  { label: 'Conta 1', partition: 'persist:conta1' },
-  { label: 'Conta 2', partition: 'persist:conta2' },
-  { label: 'Conta 3', partition: 'persist:conta3' },
-  { label: 'Conta 4', partition: 'persist:conta4' }
-];
+
+function getLocalAccountsPath() {
+  const userDataPath = app.getPath('userData');
+  return path.join(userDataPath, 'accounts-config.json');
+}
+
+function loadAccountsConfig() {
+  const filePath = getLocalAccountsPath();
+  const defaultAccounts = [
+    { label: 'Conta 1', username: '', password: '', partition: 'persist:conta1' },
+    { label: 'Conta 2', username: '', password: '', partition: 'persist:conta2' },
+    { label: 'Conta 3', username: '', password: '', partition: 'persist:conta3' },
+    { label: 'Conta 4', username: '', password: '', partition: 'persist:conta4' }
+  ];
+
+  try {
+    if (fs.existsSync(filePath)) {
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      if (Array.isArray(data) && data.length > 0) {
+        return data;
+      }
+    }
+  } catch (e) {
+    console.error("Erro ao carregar configuracoes locais de contas:", e);
+  }
+  return defaultAccounts;
+}
+
+function saveAccountsConfig(accountsData) {
+  try {
+    const filePath = getLocalAccountsPath();
+    fs.writeFileSync(filePath, JSON.stringify(accountsData, null, 2), 'utf8');
+  } catch (e) {
+    console.error("Erro ao salvar configuracoes locais de contas:", e);
+  }
+}
+
+let ACCOUNTS = loadAccountsConfig();
 const SIDEBAR_WIDTH = 260;
 
 let win;
@@ -206,8 +240,38 @@ function buildSidebarHtml() {
       </style>
     </head>
     <body>
-      <div class="sidebar-header">
+      <!-- Accounts Config Modal -->
+      <div id="accounts-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(17, 17, 27, 0.96); z-index: 9999; padding: 12px; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #313244; padding-bottom: 8px; margin-bottom: 10px;">
+          <span style="font-weight: 700; color: #f9e2af; font-size: 12px;">🔑 GERENCIAR CONTAS</span>
+          <button onclick="closeAccountsModal()" style="background: #313244; color: #cdd6f4; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">✕</button>
+        </div>
+        <p style="font-size: 10px; color: #a6adc8; margin-top: 0; margin-bottom: 10px; line-height: 1.3;">
+          🔒 <b>100% Salvo Localmente ('AppData'):</b> Suas senhas <u>nunca</u> são enviadas ou armazenadas no GitHub.
+        </p>
+
+        <div id="acc-inputs-container">
+          ${ACCOUNTS.map((acc, i) => `
+            <div style="background: #181825; border: 1px solid #313244; border-radius: 6px; padding: 8px; margin-bottom: 8px;">
+              <div style="font-size: 11px; font-weight: 700; color: #89b4fa; margin-bottom: 6px;">Conta ${i + 1}</div>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <input type="text" id="acc-label-${i}" placeholder="Nome / Apelido" value="${acc.label || ''}" style="background: #1e1e2e; color: #cdd6f4; border: 1px solid #45475a; border-radius: 4px; padding: 4px 6px; font-size: 11px;">
+                <input type="text" id="acc-user-${i}" placeholder="Login / E-mail" value="${acc.username || ''}" style="background: #1e1e2e; color: #cdd6f4; border: 1px solid #45475a; border-radius: 4px; padding: 4px 6px; font-size: 11px;">
+                <input type="password" id="acc-pass-${i}" placeholder="Senha" value="${acc.password || ''}" style="background: #1e1e2e; color: #cdd6f4; border: 1px solid #45475a; border-radius: 4px; padding: 4px 6px; font-size: 11px;">
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
+          <button onclick="saveAccountsModal()" style="background: #a6e3a1; color: #11111b; font-weight: 700; border: none; padding: 7px; border-radius: 6px; cursor: pointer; font-size: 11px;">💾 Salvar Localmente</button>
+          <button onclick="autoLoginActive()" style="background: #89b4fa; color: #11111b; font-weight: 700; border: none; padding: 7px; border-radius: 6px; cursor: pointer; font-size: 11px;">🔑 Auto Login na Aba Ativa</button>
+        </div>
+      </div>
+
+      <div class="sidebar-header" style="justify-content: space-between;">
         <span>🎮 Contas</span>
+        <a href="app://open-accounts-modal" id="btn-config-accs" style="color: #89b4fa; text-decoration: none; font-size: 10px; font-weight: 600; background: #1e1e2e; padding: 2px 7px; border-radius: 4px; border: 1px solid #313244;">⚙️ Contas</a>
       </div>
 
       <div class="items-container">
@@ -314,6 +378,30 @@ function buildSidebarHtml() {
       </div>
 
       <script>
+        function openAccountsModal() {
+          const m = document.getElementById('accounts-modal');
+          if (m) m.style.display = 'block';
+        }
+        function closeAccountsModal() {
+          const m = document.getElementById('accounts-modal');
+          if (m) m.style.display = 'none';
+        }
+        function saveAccountsModal() {
+          const accs = [];
+          const count = ${ACCOUNTS.length};
+          for (let i = 0; i < count; i++) {
+            const label = document.getElementById('acc-label-' + i)?.value.trim() || ('Conta ' + (i + 1));
+            const username = document.getElementById('acc-user-' + i)?.value.trim() || '';
+            const password = document.getElementById('acc-pass-' + i)?.value.trim() || '';
+            const partition = 'persist:conta' + (i + 1);
+            accs.push({ label, username, password, partition });
+          }
+          window.location.href = 'app://save-accounts-data?json=' + encodeURIComponent(JSON.stringify(accs));
+        }
+        function autoLoginActive() {
+          window.location.href = 'app://auto-login-active';
+        }
+
         function updateSidebarActive(activeIndex) {
           document.querySelectorAll('.item').forEach(function (el) {
             el.classList.toggle('active', el.dataset.index === String(activeIndex));
@@ -721,6 +809,55 @@ function switchTo(index) {
   pollStats();
 }
 
+async function triggerAutoLogin(accountIndex) {
+  const idx = typeof accountIndex === 'number' ? accountIndex : activeIndex;
+  if (idx < 0 || idx >= contentViews.length) return;
+  const acc = ACCOUNTS[idx];
+  if (!acc || (!acc.username && !acc.password)) return;
+
+  try {
+    await contentViews[idx].webContents.executeJavaScript(`
+      (() => {
+        const username = ${JSON.stringify(acc.username || '')};
+        const password = ${JSON.stringify(acc.password || '')};
+
+        if (username) {
+          const userInputs = document.querySelectorAll('input[name="email"], input[name="username"], input[type="email"], input[type="text"]');
+          for (const inp of userInputs) {
+            if (inp.offsetParent !== null) {
+              inp.focus();
+              inp.value = username;
+              inp.dispatchEvent(new Event('input', { bubbles: true }));
+              inp.dispatchEvent(new Event('change', { bubbles: true }));
+              break;
+            }
+          }
+        }
+
+        if (password) {
+          const passInputs = document.querySelectorAll('input[name="password"], input[type="password"]');
+          for (const inp of passInputs) {
+            if (inp.offsetParent !== null) {
+              inp.focus();
+              inp.value = password;
+              inp.dispatchEvent(new Event('input', { bubbles: true }));
+              inp.dispatchEvent(new Event('change', { bubbles: true }));
+              break;
+            }
+          }
+        }
+
+        const loginBtn = document.querySelector('button[type="submit"], .btn-login, button.login-btn, button[title*="Entrar"]');
+        if (loginBtn && username && password) {
+          setTimeout(() => loginBtn.click(), 150);
+        }
+      })()
+    `);
+  } catch (e) {
+    console.error("Erro no auto login:", e);
+  }
+}
+
 function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
@@ -730,6 +867,28 @@ function createWindow() {
   sidebarView.webContents.loadURL(buildSidebarHtml());
   sidebarView.webContents.on('will-navigate', (event, targetUrl) => {
     event.preventDefault();
+    if (targetUrl.includes('open-accounts-modal')) {
+      sidebarView.webContents.executeJavaScript(`if (typeof openAccountsModal === 'function') openAccountsModal();`).catch(() => {});
+      return;
+    }
+    if (targetUrl.includes('save-accounts-data')) {
+      const match = targetUrl.match(/json=([^&]+)/);
+      if (match && match[1]) {
+        try {
+          const newAccs = JSON.parse(decodeURIComponent(match[1]));
+          saveAccountsConfig(newAccs);
+          ACCOUNTS = newAccs;
+          sidebarView.webContents.loadURL(buildSidebarHtml());
+        } catch (e) {
+          console.error("Erro ao salvar contas:", e);
+        }
+      }
+      return;
+    }
+    if (targetUrl.includes('auto-login-active')) {
+      triggerAutoLogin(activeIndex);
+      return;
+    }
     if (targetUrl.includes('go-to-hunt')) {
       const match = targetUrl.match(/target=([^&]+)/);
       if (match && match[1]) {

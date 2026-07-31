@@ -15,3 +15,9 @@ Thumbs.db
 dist/
 out/
 build/
+
+# Local credentials & account configs (NEVER COMMIT TO GIT/GITHUB)
+accounts-config.json
+accounts.json
+*.credentials.json
+*.env
