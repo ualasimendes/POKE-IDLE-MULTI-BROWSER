@@ -56,7 +56,10 @@ function buildSidebarHtml() {
     <a href="app://${i}" class="item ${i === 0 ? 'active' : ''}" data-index="${i}">
       <div class="item-header">
         <span class="item-title">${acc.label}</span>
-        <span class="trainer-tag" id="trainer-tag-${i}">Carregando...</span>
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <button type="button" class="btn-quick-login" onclick="event.preventDefault(); event.stopPropagation(); window.location.href='app://login-${i}';" title="Fazer Login Automático com as credenciais salvas" style="font-size: 10px; background: #313244; color: #a6e3a1; border: 1px solid #45475a; padding: 1px 6px; border-radius: 4px; font-weight: 600; cursor: pointer;">🔑 Login</button>
+          <span class="trainer-tag" id="trainer-tag-${i}">Carregando...</span>
+        </div>
       </div>
       <div class="item-details" id="item-details-${i}">
         <span class="mon-name">—</span>
@@ -887,6 +890,17 @@ function createWindow() {
     }
     if (targetUrl.includes('auto-login-active')) {
       triggerAutoLogin(activeIndex);
+      return;
+    }
+    if (targetUrl.includes('login-')) {
+      const match = targetUrl.match(/login-(\d+)/);
+      if (match && match[1]) {
+        const idx = parseInt(match[1], 10);
+        if (!isNaN(idx)) {
+          switchTo(idx);
+          setTimeout(() => triggerAutoLogin(idx), 200);
+        }
+      }
       return;
     }
     if (targetUrl.includes('go-to-hunt')) {
