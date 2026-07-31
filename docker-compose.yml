@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  multi-browser:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: poke-multi-browser
+    restart: unless-stopped
+    environment:
+      - DISPLAY=${DISPLAY:-:99}
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    ipc: host
+    network_mode: host
