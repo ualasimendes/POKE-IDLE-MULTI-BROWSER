@@ -9,11 +9,19 @@
     "build": "electron-builder --win nsis portable",
     "build:installer": "electron-builder --win nsis",
     "build:portable": "electron-builder --win portable",
+    "release": "electron-builder --win nsis portable --publish always",
     "package": "electron-packager . \"Poke Idle Multi-Browser\" --platform=win32 --arch=x64 --out=dist --overwrite"
   },
   "build": {
     "appId": "com.pokeidle.multibrowser",
     "productName": "Poke Idle Multi-Browser",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ualasimendes",
+        "repo": "POKE-IDLE-MULTI-BROWSER"
+      }
+    ],
     "directories": {
       "output": "release"
     },
@@ -43,6 +51,9 @@
     "portable": {
       "artifactName": "Poke-Idle-Multi-Browser-Portable.exe"
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
   },
   "devDependencies": {
     "@electron/packager": "^18.3.6",

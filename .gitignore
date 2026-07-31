@@ -20,5 +20,8 @@ release/
 # Local credentials & account configs (NEVER COMMIT TO GIT/GITHUB)
 accounts-config.json
 accounts.json
+accounts.temp
+*.temp
+*.tmp
 *.credentials.json
 *.env
