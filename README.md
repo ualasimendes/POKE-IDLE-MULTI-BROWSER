@@ -24,8 +24,8 @@ Aplicação desktop em **Electron** para gerenciar múltiplos perfis de conta si
 ### Passos
 1. Clone o repositório:
    ```bash
-   git clone https://github.com/SEU_USUARIO/multi-browser.git
-   cd multi-browser
+   git clone https://github.com/ualasimendes/POKE-IDLE-MULTI-BROWSER.git
+   cd POKE-IDLE-MULTI-BROWSER
    ```
 
 2. Instale as dependências:
@@ -64,26 +64,4 @@ multi-browser/
 ├── Dockerfile          # Configuração da imagem Docker
 ├── docker-compose.yml  # Orquestração do serviço Docker
 └── README.md           # Documentação do projeto
-```
-
----
-
-## 📤 Publicando no GitHub
-
-Para subir as alterações para o seu repositório GitHub:
-
-```bash
-# Inicializar o repositório git (caso ainda não tenha inicializado)
-git init
-
-# Adicionar todos os arquivos
-git add .
-
-# Criar o commit inicial
-git commit -m "feat: Multi-browser com suporte a HUD do Treinador e recomendações PIWTools"
-
-# Conectar ao seu repositório remoto e enviar
-git branch -M main
-git remote add origin https://github.com/SEU_USUARIO/multi-browser.git
-git push -u origin main
 ```
