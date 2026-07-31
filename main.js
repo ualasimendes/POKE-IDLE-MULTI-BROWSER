@@ -632,7 +632,34 @@ async function pollStats() {
           const monLv = activeMon?.querySelector('.phud-lv')?.innerText.trim() || null;
           const monHp = activeMon?.querySelector('.sbar-hp .sbar-txt')?.innerText.trim() || null;
 
-          const gridCards = document.querySelectorAll('.ha-grid > .ha-card');
+          // Auto-open Hunt Analyzer se não estiver aberto
+          let gridCards = document.querySelectorAll('.ha-grid > .ha-card');
+          if ((!gridCards || gridCards.length === 0) && !window._haAutoClicked) {
+            let btn = document.querySelector('button[data-guide="dock-analyzer"], .dock-btn[data-guide="dock-analyzer"], button[title="Hunt Analyzer"], .dock-btn[title*="Hunt Analyzer"]');
+            if (!btn) {
+              const img = document.querySelector('img[alt="Hunt Analyzer"], img[src*="analyzer"]');
+              if (img) btn = img.closest('button, .dock-btn, a');
+            }
+            if (btn) {
+              window._haAutoClicked = true;
+              btn.click();
+              gridCards = document.querySelectorAll('.ha-grid > .ha-card');
+            }
+          }
+
+          // Move a janela do Hunt Analyzer para fora da tela (invisível) para não poluir o jogo
+          const haGrid = document.querySelector('.ha-grid');
+          if (haGrid) {
+            const container = haGrid.closest('[class*="window"], [class*="modal"], [class*="dialog"]') || haGrid.parentElement;
+            if (container && !container.dataset.autoManaged) {
+              container.dataset.autoManaged = 'true';
+              container.style.position = 'absolute';
+              container.style.left = '-9999px';
+              container.style.opacity = '0';
+              container.style.pointerEvents = 'none';
+            }
+          }
+
           const haDerrotados = gridCards[0]?.querySelector('b')?.innerText.trim() || '0';
           const haTempo = gridCards[1]?.querySelector('b')?.innerText.trim() || '0s';
           const haXp = document.querySelector('.ha-card.ha-xp b')?.innerText.trim() || '0';
