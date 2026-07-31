@@ -1,12 +1,16 @@
 {
-  "name": "multi-browser",
+  "name": "poke-idle-multi-browser",
+  "productName": "Poke Idle Multi-Browser",
   "version": "1.0.0",
-  "description": "Janela unica com 4 WebContentsView em grade 2x2, cada um com sessao persistente independente",
+  "description": "Multi-browser com HUD e recomendador de hunts PIWTools",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "package": "electron-packager . \"Poke Idle Multi-Browser\" --platform=win32 --arch=x64 --out=dist --overwrite"
   },
   "devDependencies": {
+    "@electron/packager": "^18.3.6",
+    "cross-env": "^7.0.3",
     "electron": "^33.0.0"
   }
 }
