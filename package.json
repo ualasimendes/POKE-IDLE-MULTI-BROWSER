@@ -1,7 +1,7 @@
 {
   "name": "poke-idle-multi-browser",
   "productName": "Poke Idle Multi-Browser",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Multi-browser com HUD, Hunt Analyzer e autologin",
   "main": "main.js",
   "scripts": {
@@ -46,10 +46,11 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Poke Idle Multi-Browser"
+      "shortcutName": "Poke Idle Multi-Browser",
+      "artifactName": "Poke-Idle-Multi-Browser-Setup-${version}.${ext}"
     },
     "portable": {
-      "artifactName": "Poke-Idle-Multi-Browser-Portable.exe"
+      "artifactName": "Poke-Idle-Multi-Browser-Portable.${ext}"
     }
   },
   "dependencies": {
