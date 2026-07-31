@@ -274,6 +274,39 @@ function buildSidebarHtml() {
         </div>
       </div>
 
+      <!-- Hunt Analyzer Live Box -->
+      <div class="info-panel" style="border-color: #45475a;">
+        <div class="panel-title" style="color: #a6e3a1;">📊 Hunt Analyzer</div>
+        <div class="info-row">
+          <span class="info-label">⚔️ Derrotados:</span>
+          <span class="info-val" id="ha-derrotados">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">⏱️ Tempo:</span>
+          <span class="info-val" id="ha-tempo">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">✨ XP Ganha:</span>
+          <span class="info-val" id="ha-xp" style="color: #a6e3a1;">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">⚾ Capturados:</span>
+          <span class="info-val" id="ha-catch" style="color: #f9e2af;">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">💰 Loot:</span>
+          <span class="info-val" id="ha-loot" style="color: #a6e3a1;">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">🛒 Supply:</span>
+          <span class="info-val" id="ha-supply" style="color: #f38ba8;">—</span>
+        </div>
+        <div class="info-row" style="margin-top: 4px; padding-top: 4px; border-top: 1px dashed #313244;">
+          <span class="info-label">💵 Saldo:</span>
+          <span class="info-val" id="ha-saldo" style="font-weight: 700; color: #a6e3a1;">—</span>
+        </div>
+      </div>
+
       <script>
         function updateSidebarActive(activeIndex) {
           document.querySelectorAll('.item').forEach(function (el) {
@@ -318,6 +351,14 @@ function buildSidebarHtml() {
           const huntXpValEl = document.getElementById('hunt-xp-val');
           const huntDollarTargetEl = document.getElementById('hunt-dollar-target');
           const huntDollarValEl = document.getElementById('hunt-dollar-val');
+
+          const haDerrotadosEl = document.getElementById('ha-derrotados');
+          const haTempoEl = document.getElementById('ha-tempo');
+          const haXpEl = document.getElementById('ha-xp');
+          const haCatchEl = document.getElementById('ha-catch');
+          const haLootEl = document.getElementById('ha-loot');
+          const haSupplyEl = document.getElementById('ha-supply');
+          const haSaldoEl = document.getElementById('ha-saldo');
 
           if (activeStat) {
             trEl.innerText = activeStat.trainerName || ('Conta ' + (activeIndex + 1));
@@ -370,6 +411,36 @@ function buildSidebarHtml() {
               huntDollarTargetEl.innerText = '—';
               huntDollarValEl.innerText = '—';
             }
+
+            // Update Hunt Analyzer
+            if (activeStat.huntAnalyzer) {
+              const ha = activeStat.huntAnalyzer;
+              if (haDerrotadosEl) haDerrotadosEl.innerText = ha.derrotados || '0';
+              if (haTempoEl) haTempoEl.innerText = ha.tempo || '0s';
+              if (haXpEl) haXpEl.innerText = ha.xp || '0';
+              if (haCatchEl) haCatchEl.innerText = ha.catch || '0';
+              if (haLootEl) haLootEl.innerText = ha.loot || '$0';
+              if (haSupplyEl) haSupplyEl.innerText = ha.supply || '-$0';
+              if (haSaldoEl) {
+                haSaldoEl.innerText = ha.saldo || '+$0';
+                if (ha.saldo && ha.saldo.includes('-')) {
+                  haSaldoEl.style.color = '#f38ba8';
+                } else {
+                  haSaldoEl.style.color = '#a6e3a1';
+                }
+              }
+            } else {
+              if (haDerrotadosEl) haDerrotadosEl.innerText = '—';
+              if (haTempoEl) haTempoEl.innerText = '—';
+              if (haXpEl) haXpEl.innerText = '—';
+              if (haCatchEl) haCatchEl.innerText = '—';
+              if (haLootEl) haLootEl.innerText = '—';
+              if (haSupplyEl) haSupplyEl.innerText = '—';
+              if (haSaldoEl) {
+                haSaldoEl.innerText = '—';
+                haSaldoEl.style.color = '#cdd6f4';
+              }
+            }
           } else {
             trEl.innerText = 'Conta ' + (activeIndex + 1);
             locEl.innerText = '—';
@@ -382,6 +453,16 @@ function buildSidebarHtml() {
             huntXpValEl.innerText = '—';
             huntDollarTargetEl.innerText = '—';
             huntDollarValEl.innerText = '—';
+            if (haDerrotadosEl) haDerrotadosEl.innerText = '—';
+            if (haTempoEl) haTempoEl.innerText = '—';
+            if (haXpEl) haXpEl.innerText = '—';
+            if (haCatchEl) haCatchEl.innerText = '—';
+            if (haLootEl) haLootEl.innerText = '—';
+            if (haSupplyEl) haSupplyEl.innerText = '—';
+            if (haSaldoEl) {
+              haSaldoEl.innerText = '—';
+              haSaldoEl.style.color = '#cdd6f4';
+            }
           }
         }
       </script>
@@ -413,7 +494,27 @@ async function pollStats() {
           const monName = activeMon?.querySelector('.phud-name')?.innerText.trim() || null;
           const monLv = activeMon?.querySelector('.phud-lv')?.innerText.trim() || null;
           const monHp = activeMon?.querySelector('.sbar-hp .sbar-txt')?.innerText.trim() || null;
-          return { trainerName: tname, location: tloc, monName, monLv, monHp };
+
+          const gridCards = document.querySelectorAll('.ha-grid > .ha-card');
+          const haDerrotados = gridCards[0]?.querySelector('b')?.innerText.trim() || '0';
+          const haTempo = gridCards[1]?.querySelector('b')?.innerText.trim() || '0s';
+          const haXp = document.querySelector('.ha-card.ha-xp b')?.innerText.trim() || '0';
+          const haCatch = document.querySelector('.ha-card.ha-catch b')?.innerText.trim() || '0';
+          const haLoot = document.querySelector('.ha-card.ha-loot b')?.innerText.trim() || '$0';
+          const haSupply = document.querySelector('.ha-card.ha-supply b')?.innerText.trim() || '-$0';
+          const haSaldo = document.querySelector('.ha-balance b')?.innerText.trim() || '+$0';
+
+          const huntAnalyzer = {
+            derrotados: haDerrotados,
+            tempo: haTempo,
+            xp: haXp,
+            catch: haCatch,
+            loot: haLoot,
+            supply: haSupply,
+            saldo: haSaldo
+          };
+
+          return { trainerName: tname, location: tloc, monName, monLv, monHp, huntAnalyzer };
         })()
       `, true);
 
