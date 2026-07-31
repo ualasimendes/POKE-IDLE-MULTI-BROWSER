@@ -529,20 +529,32 @@ async function triggerGoToHunt(targetName) {
                  });
         };
 
-        // 1. Verificar se o Mapa já está aberto ou abrir
-        let marker = findMarker();
+        // Helper para aguardar o mapa abrir no DOM
+        const waitForMap = async (timeoutMs = 1500) => {
+          const start = Date.now();
+          while (Date.now() - start < timeoutMs) {
+            if (document.querySelector('.map-body, .map-viewport, .hunt-marker, .map-filter-types')) {
+              return true;
+            }
+            await new Promise(r => setTimeout(r, 100));
+          }
+          return false;
+        };
 
-        if (!marker) {
-          console.log('[AUTO-HUNT] Mapa não visível ou hunt não encontrada na aba atual. Abrindo/Checando mapa...');
-          
+        // 1. Verificar se o Mapa já está aberto
+        let isMapOpen = await waitForMap(200);
+
+        if (!isMapOpen) {
+          console.log('[AUTO-HUNT] Mapa fechado. Abrindo mapa...');
           let mapBtn = document.querySelector('button[data-guide="dock-map"], button[data-guide="map"], button[title*="Mapa"], .dock-btn[title*="Mapa"]');
+          
           if (!mapBtn) {
-            const btns = document.querySelectorAll('button, div[role="button"]');
+            const btns = document.querySelectorAll('button, div[role="button"], a');
             for (const b of btns) {
-              const guide = b.getAttribute('data-guide') || '';
-              const title = b.getAttribute('title') || '';
-              const txt = b.textContent || '';
-              if (guide.includes('map') || title.toLowerCase().includes('mapa') || txt.toLowerCase().includes('mapa')) {
+              const guide = (b.getAttribute('data-guide') || '').toLowerCase();
+              const title = (b.getAttribute('title') || '').toLowerCase();
+              const txt = (b.textContent || '').toLowerCase();
+              if (guide.includes('map') || title.includes('mapa') || txt.includes('mapa')) {
                 mapBtn = b;
                 break;
               }
@@ -555,16 +567,19 @@ async function triggerGoToHunt(targetName) {
             document.dispatchEvent(new KeyboardEvent('keydown', { key: 'm', code: 'KeyM', keyCode: 77, bubbles: true }));
           }
 
-          await new Promise(r => setTimeout(r, 400));
-          marker = findMarker();
+          // Aguarda o container do mapa aparecer
+          isMapOpen = await waitForMap(1500);
         }
 
-        // 2. Se ainda não encontrou o marker, iterar pelas abas de regiões (Kanto, Johto, Outland, Orre, Nightmare)
-        if (!marker) {
-          console.log('[AUTO-HUNT] Procurando nas categorias de mapa (Kanto, Outland, Orre, Nightmare)...');
+        // 2. Tentar achar o marker na aba atual
+        let marker = findMarker();
+
+        // 3. Se não encontrou, alternar pelas abas das regiões
+        if (!marker && isMapOpen) {
+          console.log('[AUTO-HUNT] Hunt não encontrada na aba atual. Buscando em outras regiões...');
           const regions = ['kanto', 'johto', 'outland', 'orre', 'nightmare'];
 
-          const categoryBtns = Array.from(document.querySelectorAll('button, div[role="button"], a, .map-tab, .map-type-pill')).filter(b => {
+          const categoryBtns = Array.from(document.querySelectorAll('button, div[role="button"], a, span, .map-tab')).filter(b => {
             const txt = (b.textContent || b.getAttribute('title') || b.className || '').toLowerCase();
             return regions.some(r => txt.includes(r));
           });
@@ -573,16 +588,16 @@ async function triggerGoToHunt(targetName) {
             const txt = (catBtn.textContent || catBtn.getAttribute('title') || '').toLowerCase();
             if (txt.includes('indisponivel') || txt.includes('indisponível') || catBtn.disabled) continue;
 
-            console.log('[AUTO-HUNT] Alternando para a aba do mapa: ' + txt.trim());
+            console.log('[AUTO-HUNT] Clicando na aba da região: ' + txt.trim());
             catBtn.click();
-            await new Promise(r => setTimeout(r, 350));
+            await new Promise(r => setTimeout(r, 400));
 
             marker = findMarker();
             if (marker) break;
           }
         }
 
-        // 3. Clica no marker da hunt e confirma viagem
+        // 4. Clicar no marker e confirmar
         if (marker) {
           console.log('[AUTO-HUNT] Marker localizado! Clicando para viajar para: ' + target);
           marker.click();
@@ -594,7 +609,7 @@ async function triggerGoToHunt(targetName) {
           }
           return true;
         } else {
-          console.error('[AUTO-HUNT] Marker não encontrado para a hunt: ' + target + ' em nenhuma categoria.');
+          console.error('[AUTO-HUNT] Marker não encontrado para a hunt: ' + target);
           return false;
         }
       })()
