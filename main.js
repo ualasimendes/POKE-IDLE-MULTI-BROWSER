@@ -250,7 +250,10 @@ function buildSidebarHtml() {
         <div class="panel-title" style="color: #89b4fa;">🎯 Melhores Hunts (PIWTools)</div>
         
         <div class="hunt-card" style="border-left-color: #a6e3a1;">
-          <div class="hunt-badge xp-badge">🚀 1ª Opção: Melhor XP/h</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+            <div class="hunt-badge xp-badge" style="margin-bottom: 0;">🚀 1ª Opção: Melhor XP/h</div>
+            <a href="#" id="btn-go-xp" style="display: none; color: #11111b; background: #a6e3a1; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-decoration: none; font-size: 10px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">Ir ➔</a>
+          </div>
           <div class="info-row" style="margin-top: 2px;">
             <span class="info-label">Local:</span>
             <span class="info-val" id="hunt-xp-target">—</span>
@@ -262,7 +265,10 @@ function buildSidebarHtml() {
         </div>
 
         <div class="hunt-card" style="border-left-color: #f9e2af; margin-top: 8px;">
-          <div class="hunt-badge dollar-badge">💰 2ª Opção: Melhor $/h</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+            <div class="hunt-badge dollar-badge" style="margin-bottom: 0;">💰 2ª Opção: Melhor $/h</div>
+            <a href="#" id="btn-go-dollar" style="display: none; color: #11111b; background: #f9e2af; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-decoration: none; font-size: 10px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">Ir ➔</a>
+          </div>
           <div class="info-row" style="margin-top: 2px;">
             <span class="info-label">Local:</span>
             <span class="info-val" id="hunt-dollar-target">—</span>
@@ -351,6 +357,8 @@ function buildSidebarHtml() {
           const huntXpValEl = document.getElementById('hunt-xp-val');
           const huntDollarTargetEl = document.getElementById('hunt-dollar-target');
           const huntDollarValEl = document.getElementById('hunt-dollar-val');
+          const btnGoXpEl = document.getElementById('btn-go-xp');
+          const btnGoDollarEl = document.getElementById('btn-go-dollar');
 
           const haDerrotadosEl = document.getElementById('ha-derrotados');
           const haTempoEl = document.getElementById('ha-tempo');
@@ -391,25 +399,39 @@ function buildSidebarHtml() {
             if (activeStat.hunts) {
               const { bestXp, bestDollar } = activeStat.hunts;
               if (bestXp) {
-                huntXpTargetEl.innerText = (bestXp.location || bestXp.targetName) + ' (Lv.' + bestXp.huntLevel + ')';
+                const targetName = bestXp.targetName || bestXp.location;
+                huntXpTargetEl.innerText = (bestXp.location || targetName) + ' (Lv.' + bestXp.huntLevel + ')';
                 huntXpValEl.innerText = bestXp.xpFormatted + ' XP/h (' + bestXp.typeEff + 'x)';
+                if (btnGoXpEl) {
+                  btnGoXpEl.style.display = 'inline-block';
+                  btnGoXpEl.href = 'app://go-to-hunt?target=' + encodeURIComponent(targetName);
+                }
               } else {
                 huntXpTargetEl.innerText = '—';
                 huntXpValEl.innerText = '—';
+                if (btnGoXpEl) btnGoXpEl.style.display = 'none';
               }
 
               if (bestDollar) {
-                huntDollarTargetEl.innerText = (bestDollar.location || bestDollar.targetName) + ' (Lv.' + bestDollar.huntLevel + ')';
+                const targetName = bestDollar.targetName || bestDollar.location;
+                huntDollarTargetEl.innerText = (bestDollar.location || targetName) + ' (Lv.' + bestDollar.huntLevel + ')';
                 huntDollarValEl.innerText = bestDollar.dollarFormatted + ' $/h (' + bestDollar.typeEff + 'x)';
+                if (btnGoDollarEl) {
+                  btnGoDollarEl.style.display = 'inline-block';
+                  btnGoDollarEl.href = 'app://go-to-hunt?target=' + encodeURIComponent(targetName);
+                }
               } else {
                 huntDollarTargetEl.innerText = '—';
                 huntDollarValEl.innerText = '—';
+                if (btnGoDollarEl) btnGoDollarEl.style.display = 'none';
               }
             } else {
               huntXpTargetEl.innerText = '—';
               huntXpValEl.innerText = '—';
               huntDollarTargetEl.innerText = '—';
               huntDollarValEl.innerText = '—';
+              if (btnGoXpEl) btnGoXpEl.style.display = 'none';
+              if (btnGoDollarEl) btnGoDollarEl.style.display = 'none';
             }
 
             // Update Hunt Analyzer
@@ -453,6 +475,8 @@ function buildSidebarHtml() {
             huntXpValEl.innerText = '—';
             huntDollarTargetEl.innerText = '—';
             huntDollarValEl.innerText = '—';
+            if (btnGoXpEl) btnGoXpEl.style.display = 'none';
+            if (btnGoDollarEl) btnGoDollarEl.style.display = 'none';
             if (haDerrotadosEl) haDerrotadosEl.innerText = '—';
             if (haTempoEl) haTempoEl.innerText = '—';
             if (haXpEl) haXpEl.innerText = '—';
@@ -479,6 +503,68 @@ function updateSidebarActive() {
         updateSidebarActive('${activeIndex}');
       }
     `).catch(() => {});
+  }
+}
+
+async function triggerGoToHunt(targetName) {
+  if (activeIndex < 0 || activeIndex >= contentViews.length) return;
+  try {
+    await contentViews[activeIndex].webContents.executeJavaScript(`
+      (async () => {
+        const target = ${JSON.stringify(targetName)};
+        if (!target) return;
+
+        // 1. Abrir Mapa se não estiver aberto
+        let mapSearch = document.querySelector('input[placeholder*="Buscar"], input[placeholder*="hunt"], input[placeholder*="Mapa"], .map-search-input');
+        if (!mapSearch) {
+          const mapBtn = document.querySelector('button[data-guide="map"], button[title*="Mapa"], .dock-btn[title*="Mapa"], button[title*="Map"]');
+          if (mapBtn) {
+            mapBtn.click();
+            await new Promise(r => setTimeout(r, 300));
+          }
+        }
+
+        // Tenta achar o campo de busca no modal do mapa
+        mapSearch = document.querySelector('input[placeholder*="Buscar"], input[placeholder*="hunt"], input[placeholder*="Mapa"], .map-search-input') || 
+                    document.querySelector('.window input[type="text"], .window input[type="search"], div[class*="map"] input');
+
+        if (mapSearch) {
+          mapSearch.focus();
+          mapSearch.value = target;
+          mapSearch.dispatchEvent(new Event('input', { bubbles: true }));
+          mapSearch.dispatchEvent(new Event('change', { bubbles: true }));
+          await new Promise(r => setTimeout(r, 300));
+
+          // 2. Procura o card/marcador da hunt na lista do mapa
+          const targetClean = target.toLowerCase().trim();
+          const items = document.querySelectorAll('.hunt-item, .map-marker, .marker, .hunt-list-item, div[class*="hunt"], li[class*="hunt"], div[class*="marker"]');
+          let matchedItem = null;
+          for (const item of items) {
+            if ((item.textContent || '').toLowerCase().includes(targetClean)) {
+              matchedItem = item;
+              break;
+            }
+          }
+
+          if (matchedItem) {
+            matchedItem.click();
+            await new Promise(r => setTimeout(r, 300));
+          }
+
+          // 3. Clica no botão de viajar / ir para hunt
+          const goBtn = document.querySelector('button[class*="travel"], button[class*="go"], button[class*="hunt"], .swal-button--confirm') ||
+                        Array.from(document.querySelectorAll('button')).find(b => {
+                          const txt = (b.textContent || '').toLowerCase();
+                          return txt.includes('ir para') || txt.includes('iniciar') || txt === 'hunt' || txt.includes('mover');
+                        });
+          if (goBtn) {
+            goBtn.click();
+          }
+        }
+      })()
+    `);
+  } catch (e) {
+    console.error("Erro ao viajar para hunt:", e);
   }
 }
 
@@ -566,8 +652,16 @@ function createWindow() {
   sidebarView.webContents.loadURL(buildSidebarHtml());
   sidebarView.webContents.on('will-navigate', (event, targetUrl) => {
     event.preventDefault();
+    if (targetUrl.includes('go-to-hunt')) {
+      const match = targetUrl.match(/target=([^&]+)/);
+      if (match && match[1]) {
+        const targetName = decodeURIComponent(match[1]);
+        triggerGoToHunt(targetName);
+      }
+      return;
+    }
     const index = parseInt(targetUrl.replace('app://', ''), 10);
-    switchTo(index);
+    if (!isNaN(index)) switchTo(index);
   });
   win.contentView.addChildView(sidebarView);
 
