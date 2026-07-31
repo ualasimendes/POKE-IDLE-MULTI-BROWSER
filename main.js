@@ -1,4 +1,4 @@
-const { app, BaseWindow, WebContentsView, session, screen } = require('electron');
+const { app, BaseWindow, WebContentsView, session, screen, Tray, Menu, nativeImage } = require('electron');
 const { getRecommendedHunts } = require('./hunts');
 const path = require('path');
 const fs = require('fs');
@@ -861,15 +861,102 @@ async function triggerAutoLogin(accountIndex) {
   }
 }
 
+let tray = null;
+let isQuitting = false;
+
+function createTray() {
+  const iconBuffer = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACNSURBVDhPY/wPBAwUACZcchgAC6hhgJkZgwEkBq6AiYEBA4O9PX416EChw8BAV48uxmEA0YChHl0NXQ2yASAD0O2luhmXASADHkNDuho0gK4H0YAhv5yugWYARQao7iE1m4jVgCktUPsJuhnkAKoBqH34jCFlA1T7cYWhqUFXAwPEmofFAFLsxxWG2AB1AwB9lSjV/w+3twAAAABJRU5ErkJggg==',
+    'base64'
+  );
+  const icon = nativeImage.createFromBuffer(iconBuffer);
+
+  tray = new Tray(icon);
+  tray.setToolTip('Poke Idle Multi-Browser');
+
+  updateTrayMenu();
+
+  tray.on('click', () => {
+    if (win) {
+      if (win.isVisible()) {
+        win.focus();
+      } else {
+        win.show();
+        win.focus();
+      }
+    }
+  });
+}
+
+function updateTrayMenu() {
+  if (!tray) return;
+
+  const autoLaunchEnabled = app.getLoginItemSettings().openAtLogin;
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '🎮 Abrir Multi-Browser',
+      click: () => {
+        if (win) {
+          win.show();
+          win.focus();
+        }
+      }
+    },
+    {
+      label: '📌 Iniciar com o Windows',
+      type: 'checkbox',
+      checked: autoLaunchEnabled,
+      click: (menuItem) => {
+        app.setLoginItemSettings({
+          openAtLogin: menuItem.checked,
+          openAsHidden: false
+        });
+        updateTrayMenu();
+        if (sidebarView && !sidebarView.webContents.isLoading()) {
+          sidebarView.webContents.loadURL(buildSidebarHtml());
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '❌ Sair Totalmente',
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      }
+    }
+  ]);
+
+  tray.setContextMenu(contextMenu);
+}
+
 function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
   win = new BaseWindow({ width, height, center: true });
 
+  win.on('close', (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      win.hide();
+      return false;
+    }
+  });
+
   sidebarView = new WebContentsView();
   sidebarView.webContents.loadURL(buildSidebarHtml());
   sidebarView.webContents.on('will-navigate', (event, targetUrl) => {
     event.preventDefault();
+    if (targetUrl.includes('toggle-autostart')) {
+      const match = targetUrl.match(/enable=(true|false)/);
+      if (match && match[1]) {
+        const enable = match[1] === 'true';
+        app.setLoginItemSettings({ openAtLogin: enable });
+        updateTrayMenu();
+      }
+      return;
+    }
     if (targetUrl.includes('open-accounts-modal')) {
       sidebarView.webContents.executeJavaScript(`if (typeof openAccountsModal === 'function') openAccountsModal();`).catch(() => {});
       return;
@@ -937,7 +1024,10 @@ function createWindow() {
   setInterval(pollStats, 1500);
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  createTray();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

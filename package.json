@@ -2,15 +2,52 @@
   "name": "poke-idle-multi-browser",
   "productName": "Poke Idle Multi-Browser",
   "version": "1.0.0",
-  "description": "Multi-browser com HUD e recomendador de hunts PIWTools",
+  "description": "Multi-browser com HUD, Hunt Analyzer e autologin",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "build": "electron-builder --win nsis portable",
+    "build:installer": "electron-builder --win nsis",
+    "build:portable": "electron-builder --win portable",
     "package": "electron-packager . \"Poke Idle Multi-Browser\" --platform=win32 --arch=x64 --out=dist --overwrite"
+  },
+  "build": {
+    "appId": "com.pokeidle.multibrowser",
+    "productName": "Poke Idle Multi-Browser",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Poke Idle Multi-Browser"
+    },
+    "portable": {
+      "artifactName": "Poke-Idle-Multi-Browser-Portable.exe"
+    }
   },
   "devDependencies": {
     "@electron/packager": "^18.3.6",
     "cross-env": "^7.0.3",
-    "electron": "^33.0.0"
+    "electron": "^33.0.0",
+    "electron-builder": "^26.15.3"
   }
 }
