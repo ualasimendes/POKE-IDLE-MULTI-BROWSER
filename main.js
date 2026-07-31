@@ -509,28 +509,41 @@ function updateSidebarActive() {
 async function triggerGoToHunt(targetName) {
   if (activeIndex < 0 || activeIndex >= contentViews.length) return;
   try {
-    console.log(`[AUTO-HUNT] Solicitado viagem para: "${targetName}" na Conta ${activeIndex + 1}`);
-    
-    const result = await contentViews[activeIndex].webContents.executeJavaScript(`
+    console.log(`[AUTO-HUNT] Viajando para: "${targetName}" na Conta ${activeIndex + 1}`);
+
+    await contentViews[activeIndex].webContents.executeJavaScript(`
       (async () => {
         const target = ${JSON.stringify(targetName)};
-        const targetClean = target.toLowerCase().trim();
-        const logs = [];
-        const log = (msg) => { console.log('[AUTO-HUNT]', msg); logs.push(msg); };
+        if (!target) return;
 
-        log('Target hunt: ' + target);
+        const targetClean = target.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const slug = target.toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
 
-        // 1. Verificar se o Mapa já está aberto ou procurar o botão do Mapa
-        let mapSearchInput = document.querySelector('input[class*="map"], .map-search, input[placeholder*="Buscar"], input[placeholder*="hunt"], input[placeholder*="Mapa"]');
-        
-        if (!mapSearchInput) {
-          log('Mapa não aberto. Procurando botão do mapa...');
-          let mapBtn = document.querySelector('[data-guide*="map"], [title*="Mapa"], [title*="Map"], .dock-btn[title*="Mapa"], .dock-map');
+        const findMarker = () => {
+          return document.querySelector('button.hunt-marker[data-guide="hunt-' + slug + '"]') ||
+                 document.querySelector('button.hunt-marker[title*="' + target + '"]') ||
+                 Array.from(document.querySelectorAll('button.hunt-marker')).find(b => {
+                   const title = (b.getAttribute('title') || '').toLowerCase();
+                   const name = (b.querySelector('.hunt-name')?.textContent || '').toLowerCase();
+                   return title.includes(targetClean) || name.includes(targetClean);
+                 });
+        };
+
+        // 1. Tenta achar o marker se o mapa já estiver visível
+        let marker = findMarker();
+
+        // 2. Se não encontrou, abre o mapa primeiro
+        if (!marker) {
+          console.log('[AUTO-HUNT] Mapa não visível. Abrindo mapa...');
+          
+          let mapBtn = document.querySelector('button[data-guide="dock-map"], button[data-guide="map"], button[title*="Mapa"], .dock-btn[title*="Mapa"]');
           if (!mapBtn) {
-            const allBtns = document.querySelectorAll('button, div[role="button"], a, .dock-btn, .phud-btn');
-            for (const b of allBtns) {
-              const str = (b.textContent || b.getAttribute('title') || b.getAttribute('data-guide') || b.className || '').toLowerCase();
-              if (str.includes('mapa') || str === 'map' || str.includes('dock-map')) {
+            const btns = document.querySelectorAll('button, div[role="button"]');
+            for (const b of btns) {
+              const guide = b.getAttribute('data-guide') || '';
+              const title = b.getAttribute('title') || '';
+              const txt = b.textContent || '';
+              if (guide.includes('map') || title.toLowerCase().includes('mapa') || txt.toLowerCase().includes('mapa')) {
                 mapBtn = b;
                 break;
               }
@@ -538,68 +551,34 @@ async function triggerGoToHunt(targetName) {
           }
 
           if (mapBtn) {
-            log('Botão do mapa localizado. Clicando...');
             mapBtn.click();
           } else {
-            log('Disparando tecla "m"...');
             document.dispatchEvent(new KeyboardEvent('keydown', { key: 'm', code: 'KeyM', keyCode: 77, bubbles: true }));
           }
 
-          await new Promise(r => setTimeout(r, 400));
-          mapSearchInput = document.querySelector('input[class*="map"], .map-search, input[placeholder*="Buscar"], input[placeholder*="hunt"], input[placeholder*="Mapa"], input');
+          await new Promise(r => setTimeout(r, 350));
+
+          // Procura o marker novamente após abrir o mapa
+          marker = findMarker();
         }
 
-        if (mapSearchInput) {
-          log('Campo de busca de mapa encontrado: ' + (mapSearchInput.className || mapSearchInput.placeholder));
-          mapSearchInput.focus();
-          mapSearchInput.value = target;
-          mapSearchInput.dispatchEvent(new Event('input', { bubbles: true }));
-          mapSearchInput.dispatchEvent(new Event('change', { bubbles: true }));
-          await new Promise(r => setTimeout(r, 400));
-        }
+        if (marker) {
+          console.log('[AUTO-HUNT] Marker localizado! Clicando para viajar para: ' + target);
+          marker.click();
+          await new Promise(r => setTimeout(r, 200));
 
-        // 2. Procurar elemento com o nome da hunt (no mapa ou lista de resultados)
-        const allElements = document.querySelectorAll('[class*="map"], [class*="hunt"], [class*="marker"], tr, td, li, button, div');
-        let huntEl = null;
-
-        for (const el of allElements) {
-          const txt = (el.textContent || '').toLowerCase().trim();
-          if (txt === targetClean || (txt.includes(targetClean) && txt.length < 50)) {
-            if (!huntEl || el.textContent.length < huntEl.textContent.length) {
-              huntEl = el;
-            }
+          // Auto-confirma se houver modal de confirmação (ex: SweetAlert)
+          const confirmBtn = document.querySelector('.swal-button--confirm, button.confirm, button[class*="confirm"], button[title*="Sim"]');
+          if (confirmBtn) {
+            confirmBtn.click();
           }
-        }
-
-        if (huntEl) {
-          log('Elemento da hunt localizado: ' + huntEl.textContent.trim().substring(0, 30));
-          huntEl.click();
-          await new Promise(r => setTimeout(r, 300));
-        }
-
-        // 3. Procurar botão de Ir / Viajar / Mover / Teleportar
-        let travelBtn = null;
-        const candidates = document.querySelectorAll('button, div[role="button"], a');
-        for (const b of candidates) {
-          const txt = (b.textContent || b.getAttribute('title') || '').toLowerCase().trim();
-          if (txt.includes('ir') || txt.includes('viajar') || txt.includes('teleportar') || txt.includes('hunt') || txt.includes('mover') || txt.includes('go')) {
-            travelBtn = b;
-            break;
-          }
-        }
-
-        if (travelBtn) {
-          log('Botão de viagem encontrado: ' + travelBtn.textContent.trim());
-          travelBtn.click();
-          return { success: true, logs };
+          return true;
         } else {
-          log('Nenhum botão de viagem explícito encontrado.');
-          return { success: false, logs };
+          console.error('[AUTO-HUNT] Marker não encontrado para a hunt: ' + target);
+          return false;
         }
       })()
     `);
-
-    console.log("[AUTO-HUNT RESULT]", result);
   } catch (e) {
     console.error("Erro ao viajar para hunt:", e);
   }
