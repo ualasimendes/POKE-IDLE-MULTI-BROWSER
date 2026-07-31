@@ -2,6 +2,10 @@
 
 Aplicação desktop em **Electron** para gerenciar múltiplos perfis de conta simultâneos no *Poke Idle World*, contando com detecção automática do estado do jogo (Treinador, Pokémon ativo, nível e barra de HP) e um **Recomendador Inteligente de Hunts integrado do PIWTools** (Melhor XP/hora e Melhor Dólar/hora em tempo real).
 
+<img width="1913" height="1027" alt="exemplo1" src="https://github.com/user-attachments/assets/dca97007-a43c-4426-b732-84e764454378" />
+
+<img width="1917" height="1026" alt="exemplo2" src="https://github.com/user-attachments/assets/ad3cfd16-cfc3-4ec0-9401-28c8d4861924" />
+
 ---
 
 ## ⚡ Funcionalidades
